@@ -16,10 +16,7 @@ geth:
 libcgeth:
 	go build -buildmode c-shared -o build/bin/libcgeth.so ./cmd/read_only_geth
 	@echo "Done building."
-
-libcgeth_test:
-	go build -o build/bin/geth ./cmd/read_only_geth
-	@echo "Done building."
+	
 all:
 	$(GORUN) build/ci.go install
 
