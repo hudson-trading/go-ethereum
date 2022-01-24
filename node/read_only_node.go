@@ -17,6 +17,7 @@ type ReadOnlyNode struct {
 	Node
 }
 
+// Overrite New() for ReadOnlyNode
 func NewReadOnly(conf *Config) (*ReadOnlyNode, error) {
 	if conf.DataDir != "" {
 		absdatadir, err := filepath.Abs(conf.DataDir)
@@ -42,6 +43,7 @@ func NewReadOnly(conf *Config) (*ReadOnlyNode, error) {
 	return read_node, nil
 }
 
+// Overrite Close() for ReadOnlyNode
 func (n *ReadOnlyNode) Close() error {
 	n.startStopLock.Lock()
 	defer n.startStopLock.Unlock()
@@ -80,10 +82,7 @@ func (n *ReadOnlyNode) doClose(errs []error) error {
 			errs = append(errs, err)
 		}
 	}
-
-	// Release instance directory lock.
 	n.closeDataDir()
-
 	// Unblock n.Wait.
 	close(n.stop)
 

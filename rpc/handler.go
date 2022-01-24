@@ -76,11 +76,6 @@ func DefaultCallProc() *callProc {
 	return cproc
 }
 
-func DefaultHandler() *handler {
-	h := &handler{}
-	return h
-}
-
 func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *serviceRegistry) *handler {
 	rootCtx, cancelRoot := context.WithCancel(connCtx)
 	h := &handler{

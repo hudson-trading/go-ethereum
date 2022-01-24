@@ -122,7 +122,6 @@ func NewCustom(file string, namespace string, customize func(options *opt.Option
 		db, err = leveldb.RecoverFile(file, nil)
 	}
 	if err != nil {
-		fmt.Printf("%s leveldb.Openfile() error\n", file)
 		return nil, err
 	}
 	// Assemble the wrapper with all the registered metrics
