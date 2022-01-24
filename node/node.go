@@ -560,7 +560,6 @@ func (n *Node) OpenDatabase(name string, cache, handles int, namespace string, r
 	if n.state == closedState {
 		return nil, ErrNodeStopped
 	}
-
 	var db ethdb.Database
 	var err error
 	if n.config.DataDir == "" {

@@ -1246,6 +1246,14 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	}
 }
 
+func SetReadOnlyNodeConfig(cfg *node.Config, datadir string) {
+	setReadOnlyDataDir(cfg, datadir)
+}
+
+func setReadOnlyDataDir(cfg *node.Config, datadir string) {
+	cfg.DataDir = filepath.Join(datadir)
+}
+
 func setSmartCard(ctx *cli.Context, cfg *node.Config) {
 	// Skip enabling smartcards if no path is set
 	path := ctx.GlobalString(SmartCardDaemonPathFlag.Name)
@@ -1470,6 +1478,44 @@ func CheckExclusive(ctx *cli.Context, args ...interface{}) {
 	if len(set) > 1 {
 		Fatalf("Flags %v can't be used at the same time", strings.Join(set, ", "))
 	}
+}
+
+func SetReadOnlyEthConfig(cfg *ethconfig.Config) {
+
+	// Cap the cache allowance and tune the garbage collector
+	mem, err := gopsutil.VirtualMemory()
+	if err == nil {
+		if 32<<(^uintptr(0)>>63) == 32 && mem.Total > 2*1024*1024*1024 {
+			log.Warn("Lowering memory allowance on 32bit arch", "available", mem.Total/1024/1024, "addressable", 2*1024)
+			mem.Total = 2 * 1024 * 1024 * 1024
+		}
+	}
+	// Ensure Go's GC ignores the database cache for trigger percentage
+	cache := CacheFlag.Value
+	gogc := math.Max(20, math.Min(100, 100/(float64(cache)/1024)))
+
+	log.Debug("Sanitizing Go's GC trigger", "percent", int(gogc))
+	godebug.SetGCPercent(int(gogc))
+	cfg.NetworkId = NetworkIdFlag.Value
+	cfg.DatabaseCache = CacheFlag.Value * CacheDatabaseFlag.Value / 100
+	cfg.DatabaseHandles = MakeDatabaseHandles()
+	cfg.TxLookupLimit = TxLookupLimitFlag.Value
+	cfg.TrieCleanCache = CacheFlag.Value * CacheTrieFlag.Value / 100
+	cfg.TrieCleanCacheJournal = CacheTrieJournalFlag.Value
+	cfg.TrieCleanCacheRejournal = CacheTrieRejournalFlag.Value
+	cfg.TrieDirtyCache = CacheFlag.Value * CacheGCFlag.Value / 100
+	cfg.SnapshotCache = CacheFlag.Value * CacheSnapshotFlag.Value / 100
+	cfg.RPCGasCap = 0
+	if cfg.RPCGasCap != 0 {
+		log.Info("Set global gas cap", "cap", cfg.RPCGasCap)
+	} else {
+		log.Info("Global gas cap disabled")
+	}
+	cfg.RPCEVMTimeout = RPCGlobalEVMTimeoutFlag.Value
+	cfg.RPCTxFeeCap = RPCGlobalTxFeeCapFlag.Value
+	cfg.EthDiscoveryURLs, cfg.SnapDiscoveryURLs = []string{}, []string{}
+	cfg.Genesis = core.DefaultGenesisBlock()
+	cfg.NetworkId = 1
 }
 
 // SetEthConfig applies eth-related command line flags to the config.
@@ -1738,6 +1784,15 @@ func RegisterEthService(stack *node.Node, cfg *ethconfig.Config, isCatalyst bool
 		if err := catalyst.Register(stack, backend); err != nil {
 			Fatalf("Failed to register the catalyst service: %v", err)
 		}
+	}
+	stack.RegisterAPIs(tracers.APIs(backend.APIBackend))
+	return backend.APIBackend, backend
+}
+
+func RegisterReadOnlyEthService(stack *node.ReadOnlyNode, cfg *ethconfig.Config) (ethapi.Backend, *eth.ReadOnlyEthereum) {
+	backend, err := eth.NewReadOnly(stack, cfg)
+	if err != nil {
+		Fatalf("Failed to register the Ethereum service: %v", err)
 	}
 	stack.RegisterAPIs(tracers.APIs(backend.APIBackend))
 	return backend.APIBackend, backend

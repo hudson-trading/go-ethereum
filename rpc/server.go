@@ -58,6 +58,10 @@ func NewServer() *Server {
 	return server
 }
 
+func (s *Server) Services() *serviceRegistry {
+	return &s.services
+}
+
 // RegisterName creates a service for the given receiver type under the given name. When no
 // methods on the given receiver match the criteria to be either a RPC method or a
 // subscription an error is returned. Otherwise a new service is created and added to the

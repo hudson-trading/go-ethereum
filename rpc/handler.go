@@ -71,6 +71,16 @@ type callProc struct {
 	notifiers []*Notifier
 }
 
+func DefaultCallProc() *callProc {
+	cproc := &callProc{ctx: context.Background(), notifiers: make([]*Notifier, 0)}
+	return cproc
+}
+
+func DefaultHandler() *handler {
+	h := &handler{}
+	return h
+}
+
 func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *serviceRegistry) *handler {
 	rootCtx, cancelRoot := context.WithCancel(connCtx)
 	h := &handler{
@@ -286,7 +296,6 @@ func (h *handler) handleResponse(msg *jsonrpcMessage) {
 	}
 }
 
-// handleCallMsg executes a call message and returns the answer.
 func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMessage {
 	start := time.Now()
 	switch {

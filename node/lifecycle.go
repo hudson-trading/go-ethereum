@@ -29,3 +29,9 @@ type Lifecycle interface {
 	// are all terminated.
 	Stop() error
 }
+
+type ReadOnlyLifecycle interface {
+	Lifecycle
+	ReadOnlyStart() error
+	ReadOnlyStop() error
+}

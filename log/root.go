@@ -41,17 +41,17 @@ func Debug(msg string, ctx ...interface{}) {
 
 // Info is a convenient alias for Root().Info
 func Info(msg string, ctx ...interface{}) {
-	root.write(msg, LvlInfo, ctx, skipLevel)
+	//root.write(msg, LvlInfo, ctx, skipLevel)
 }
 
 // Warn is a convenient alias for Root().Warn
 func Warn(msg string, ctx ...interface{}) {
-	root.write(msg, LvlWarn, ctx, skipLevel)
+	//root.write(msg, LvlWarn, ctx, skipLevel)
 }
 
 // Error is a convenient alias for Root().Error
 func Error(msg string, ctx ...interface{}) {
-	root.write(msg, LvlError, ctx, skipLevel)
+	//root.write(msg, LvlError, ctx, skipLevel)
 }
 
 // Crit is a convenient alias for Root().Crit

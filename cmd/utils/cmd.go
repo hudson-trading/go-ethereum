@@ -67,7 +67,6 @@ func Fatalf(format string, args ...interface{}) {
 	fmt.Fprintf(w, "Fatal: "+format+"\n", args...)
 	os.Exit(1)
 }
-
 func StartNode(ctx *cli.Context, stack *node.Node, isConsole bool) {
 	if err := stack.Start(); err != nil {
 		Fatalf("Error starting protocol stack: %v", err)
@@ -87,6 +86,44 @@ func StartNode(ctx *cli.Context, stack *node.Node, isConsole bool) {
 			go monitorFreeDiskSpace(sigc, stack.InstanceDir(), uint64(minFreeDiskSpace)*1024*1024)
 		}
 
+		shutdown := func() {
+			log.Info("Got interrupt, shutting down...")
+			go stack.Close()
+			for i := 10; i > 0; i-- {
+				<-sigc
+				if i > 1 {
+					log.Warn("Already shutting down, interrupt more to panic.", "times", i-1)
+				}
+			}
+			debug.Exit() // ensure trace and CPU profile data is flushed.
+			debug.LoudPanic("boom")
+		}
+
+		if isConsole {
+			// In JS console mode, SIGINT is ignored because it's handled by the console.
+			// However, SIGTERM still shuts down the node.
+			for {
+				sig := <-sigc
+				if sig == syscall.SIGTERM {
+					shutdown()
+					return
+				}
+			}
+		} else {
+			<-sigc
+			shutdown()
+		}
+	}()
+}
+
+func StartNodeReadOnly(stack *node.ReadOnlyNode, isConsole bool) {
+	if err := stack.Start(); err != nil {
+		Fatalf("Error starting protocol stack: %v", err)
+	}
+	go func() {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
 		shutdown := func() {
 			log.Info("Got interrupt, shutting down...")
 			go stack.Close()

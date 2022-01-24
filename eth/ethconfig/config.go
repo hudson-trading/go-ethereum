@@ -241,3 +241,34 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	}
 	return beacon.New(engine)
 }
+
+func CreateConsensusEngineReadOnly(stack *node.ReadOnlyNode, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+	// If proof-of-authority is requested, set it up
+	var engine consensus.Engine
+	if chainConfig.Clique != nil {
+		engine = clique.New(chainConfig.Clique, db)
+	} else {
+		switch config.PowMode {
+		case ethash.ModeFake:
+			log.Warn("Ethash used in fake mode")
+		case ethash.ModeTest:
+			log.Warn("Ethash used in test mode")
+		case ethash.ModeShared:
+			log.Warn("Ethash used in shared mode")
+		}
+		engine = ethash.New(ethash.Config{
+			PowMode:          config.PowMode,
+			CacheDir:         stack.ResolvePath(config.CacheDir),
+			CachesInMem:      config.CachesInMem,
+			CachesOnDisk:     config.CachesOnDisk,
+			CachesLockMmap:   config.CachesLockMmap,
+			DatasetDir:       config.DatasetDir,
+			DatasetsInMem:    config.DatasetsInMem,
+			DatasetsOnDisk:   config.DatasetsOnDisk,
+			DatasetsLockMmap: config.DatasetsLockMmap,
+			NotifyFull:       config.NotifyFull,
+		}, notify, noverify)
+		engine.(*ethash.Ethash).SetThreads(-1) // Disable CPU mining
+	}
+	return beacon.New(engine)
+}

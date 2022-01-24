@@ -346,6 +346,28 @@ func (s *Ethereum) APIs() []rpc.API {
 	}...)
 }
 
+func (s *ReadOnlyEthereum) APIs() []rpc.API {
+	apis := ethapi.GetAPIs(s.APIBackend)
+
+	// Append any APIs exposed explicitly by the consensus engine
+	apis = append(apis, s.engine.APIs(s.BlockChain())...)
+
+	// Append all the local APIs and return
+	return append(apis, []rpc.API{
+		{
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   NewPublicEthereumAPI(&s.Ethereum),
+			Public:    true,
+		}, {
+			Namespace: "net",
+			Version:   "1.0",
+			Service:   s.netRPCService,
+			Public:    true,
+		},
+	}...)
+}
+
 func (s *Ethereum) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }

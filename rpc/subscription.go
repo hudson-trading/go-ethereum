@@ -71,6 +71,28 @@ func randomIDGenerator() func() ID {
 	}
 }
 
+func RandomIDGenerator() func() ID {
+	var buf = make([]byte, 8)
+	var seed int64
+	if _, err := crand.Read(buf); err == nil {
+		seed = int64(binary.BigEndian.Uint64(buf))
+	} else {
+		seed = int64(time.Now().Nanosecond())
+	}
+
+	var (
+		mu  sync.Mutex
+		rng = rand.New(rand.NewSource(seed))
+	)
+	return func() ID {
+		mu.Lock()
+		defer mu.Unlock()
+		id := make([]byte, 16)
+		rng.Read(id)
+		return encodeID(id)
+	}
+}
+
 func encodeID(b []byte) ID {
 	id := hex.EncodeToString(b)
 	id = strings.TrimLeft(id, "0")

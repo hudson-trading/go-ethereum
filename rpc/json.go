@@ -264,6 +264,22 @@ func parseMessage(raw json.RawMessage) ([]*jsonrpcMessage, bool) {
 	return msgs, true
 }
 
+func ParseMessage(raw json.RawMessage) ([]*jsonrpcMessage, bool) {
+	if !isBatch(raw) {
+		msgs := []*jsonrpcMessage{{}}
+		json.Unmarshal(raw, &msgs[0])
+		return msgs, false
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.Token() // skip '['
+	var msgs []*jsonrpcMessage
+	for dec.More() {
+		msgs = append(msgs, new(jsonrpcMessage))
+		dec.Decode(&msgs[len(msgs)-1])
+	}
+	return msgs, true
+}
+
 // isBatch returns true when the first non-whitespace characters is '['
 func isBatch(raw json.RawMessage) bool {
 	for _, c := range raw {

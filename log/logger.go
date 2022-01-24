@@ -161,23 +161,23 @@ func newContext(prefix []interface{}, suffix []interface{}) []interface{} {
 }
 
 func (l *logger) Trace(msg string, ctx ...interface{}) {
-	l.write(msg, LvlTrace, ctx, skipLevel)
+	//l.write(msg, LvlTrace, ctx, skipLevel)
 }
 
 func (l *logger) Debug(msg string, ctx ...interface{}) {
-	l.write(msg, LvlDebug, ctx, skipLevel)
+	//l.write(msg, LvlDebug, ctx, skipLevel)
 }
 
 func (l *logger) Info(msg string, ctx ...interface{}) {
-	l.write(msg, LvlInfo, ctx, skipLevel)
+	//l.write(msg, LvlInfo, ctx, skipLevel)
 }
 
 func (l *logger) Warn(msg string, ctx ...interface{}) {
-	l.write(msg, LvlWarn, ctx, skipLevel)
+	//l.write(msg, LvlWarn, ctx, skipLevel)
 }
 
 func (l *logger) Error(msg string, ctx ...interface{}) {
-	l.write(msg, LvlError, ctx, skipLevel)
+	//l.write(msg, LvlError, ctx, skipLevel)
 }
 
 func (l *logger) Crit(msg string, ctx ...interface{}) {
