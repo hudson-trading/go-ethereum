@@ -2,15 +2,11 @@ package main
 
 import (
 	"C"
-
 	"github.com/ethereum/go-ethereum/internal/debug"
 )
 import (
 	"context"
-	"os"
-	"unsafe"
-
-	"github.com/ethereum/go-ethereum/log"
+	"unsafe"	
 	"github.com/ethereum/go-ethereum/node"
 )
 
@@ -18,9 +14,9 @@ var stack *node.Node
 
 //export open_database
 func open_database(datadir *C.char) C.int {
-	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
-	glogger.Verbosity(0)
-	log.Root().SetHandler(glogger)
+//	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+//	glogger.Verbosity(0)
+//	log.Root().SetHandler(glogger)
 	if stack != nil {
 		return C.int(-1)
 	}
