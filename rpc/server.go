@@ -131,8 +131,8 @@ func (s *Server) ServeRawRequest(ctx context.Context, data []byte) (string, erro
 	h := newHandler(ctx, codec, s.idgen, &s.services)
 	h.allowSubscribe = false
 	defer h.close(io.EOF, nil)
-	msg, _ := parseMessage(data)
-	return h.handleCallMsg(DefaultCallProc(), msg[0]).String(), nil
+	msg, _ := ParseMessage(data)
+	return h.HandleCallMsg(DefaultCallProc(), msg[0]).String(), nil
 
 }
 
