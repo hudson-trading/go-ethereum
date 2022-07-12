@@ -368,38 +368,43 @@ func (n *Node) startExternalRPC() error {
 		if err := n.ipc.start(n.rpcAPIs); err != nil {
 			return err
 		}
-	}
 
-	// Configure HTTP.
-	if n.config.HTTPHost != "" {
-		config := httpConfig{
-			CorsAllowedOrigins: n.config.HTTPCors,
-			Vhosts:             n.config.HTTPVirtualHosts,
-			Modules:            n.config.HTTPModules,
-			prefix:             n.config.HTTPPathPrefix,
+		// Configure HTTP.
+		if n.config.HTTPHost != "" {
+			config := httpConfig{
+				CorsAllowedOrigins: n.config.HTTPCors,
+				Vhosts:             n.config.HTTPVirtualHosts,
+				Modules:            n.config.HTTPModules,
+				prefix:             n.config.HTTPPathPrefix,
+			}
+			if err := n.http.setListenAddr(n.config.HTTPHost, n.config.HTTPPort); err != nil {
+				return err
+			}
+			if err := n.http.enableRPC(n.rpcAPIs, config); err != nil {
+				return err
+			}
 		}
-		if err := n.http.setListenAddr(n.config.HTTPHost, n.config.HTTPPort); err != nil {
-			return err
-		}
-		if err := n.http.enableRPC(n.rpcAPIs, config); err != nil {
-			return err
-		}
-	}
 
-	// Configure WebSocket.
-	if n.config.WSHost != "" {
-		server := n.wsServerForPort(n.config.WSPort)
-		config := wsConfig{
-			Modules: n.config.WSModules,
-			Origins: n.config.WSOrigins,
-			prefix:  n.config.WSPathPrefix,
+		// Configure WebSocket.
+		if n.config.WSHost != "" {
+			server := n.wsServerForPort(n.config.WSPort)
+			config := wsConfig{
+				Modules: n.config.WSModules,
+				Origins: n.config.WSOrigins,
+				prefix:  n.config.WSPathPrefix,
+			}
+			if err := server.setListenAddr(n.config.WSHost, n.config.WSPort); err != nil {
+				return err
+			}
+			if err := server.enableWS(n.rpcAPIs, config); err != nil {
+				return err
+			}
 		}
-		if err := server.setListenAddr(n.config.WSHost, n.config.WSPort); err != nil {
+
+		if err := n.http.start(); err != nil {
 			return err
 		}
-		if err := server.enableWS(n.rpcAPIs, config); err != nil {
-			return err
-		}
+		return n.ws.start()
 	}
 
 	if err := n.http.start(); err != nil {
