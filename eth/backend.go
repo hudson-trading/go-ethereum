@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state/pruner"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -139,30 +138,27 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	var genesisErr error
 	// Assemble the Ethereum object
 	if stack.ReadOnly() {
-		chainDb, err = stack.OpenDatabase("chaindata", config.DatabaseCache, config.DatabaseHandles, "eth/db/chaindata/", true)
-		if config.Genesis != nil {
-			chainConfig = config.Genesis.Config
-		} else {
-			chainConfig = core.DefaultGenesisBlock().Config
+		chainDb, err = stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "eth/db/chaindata/", true)
+		if err != nil {
+			return nil, err
 		}
-		genesisHash = common.Hash{}
-		genesisErr = nil
+		chainConfig, genesisHash, genesisErr = core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.OverrideArrowGlacier, config.OverrideTerminalTotalDifficulty)
 	} else {
-		chainDb, err = stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "eth/db/chaindata/", false)
+		chainDb, _ = stack.OpenDatabaseWithFreezer("chaindata", config.DatabaseCache, config.DatabaseHandles, config.DatabaseFreezer, "eth/db/chaindata/", false)
 		chainConfig, genesisHash, genesisErr = core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.OverrideArrowGlacier, config.OverrideTerminalTotalDifficulty)
 	}
-	if err != nil {
-		return nil, err
-	}
+
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb, stack.ResolvePath(config.TrieCleanCacheJournal)); err != nil {
-		log.Error("Failed to recover state", "error", err)
-	}
+	// if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb, stack.ResolvePath(config.TrieCleanCacheJournal)); err != nil {
+	// 	log.Error("Failed to recover state", "error", err)
+	// }
+	log.Info("after recover pruning")
 	merger := consensus.NewMerger(chainDb)
+	log.Info("before eth init")
 	eth := &Ethereum{
 		config:            config,
 		merger:            merger,
@@ -180,8 +176,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		shutdownTracker:   shutdowncheck.NewShutdownTracker(chainDb),
 		readOnly:          stack.ReadOnly(),
 	}
-
+	log.Info("after eth init")
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
+	log.Info("after rawdb.ReadDatabaseVersion")
 	var dbVer = "<nil>"
 	if bcVersion != nil {
 		dbVer = fmt.Sprintf("%d", *bcVersion)
@@ -212,6 +209,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			TrieTimeLimit:       config.TrieTimeout,
 			SnapshotLimit:       config.SnapshotCache,
 			Preimages:           config.Preimages,
+			ReadOnly:            stack.ReadOnly(),
 		}
 	)
 
@@ -288,7 +286,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	stack.RegisterLifecycle(eth)
 
 	// Successful startup; push a marker and check previous unclean shutdowns.
-	eth.shutdownTracker.MarkStartup()
+	if !stack.ReadOnly() {
+		eth.shutdownTracker.MarkStartup()
+	}
 	return eth, nil
 }
 
@@ -601,7 +601,9 @@ func (s *Ethereum) Stop() error {
 	s.engine.Close()
 
 	// Clean shutdown marker as the last thing before closing db
-	s.shutdownTracker.Stop()
+	if !s.readOnly {
+		s.shutdownTracker.Stop()
+	}
 	s.chainDb.Close()
 	s.eventMux.Stop()
 

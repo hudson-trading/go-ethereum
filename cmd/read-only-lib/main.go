@@ -2,11 +2,14 @@ package main
 
 import (
 	"C"
+
 	"github.com/ethereum/go-ethereum/internal/debug"
 )
 import (
 	"context"
-	"unsafe"	
+	"unsafe"
+
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"
 )
 
@@ -14,14 +17,10 @@ var stack *node.Node
 
 //export open_database
 func open_database(datadir *C.char) C.int {
-//	glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
-//	glogger.Verbosity(0)
-//	log.Root().SetHandler(glogger)
-	if stack != nil {
-		return C.int(-1)
-	}
-	go_datadir := C.GoString(datadir)
-	stack, _ = makeReadOnlyNode(go_datadir)
+	// glogger := log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+	// glogger.Verbosity(1)
+	// log.Root().SetHandler(glogger)
+	stack, _ = makeReadOnlyNode("/mnt/pepper/intern/home/dmaclennan/share/geth_archive_20220707")
 	if err := startNode(stack, false); err != nil {
 		return C.int(-1)
 	}
@@ -29,15 +28,24 @@ func open_database(datadir *C.char) C.int {
 }
 
 //export wrapper_call
-func wrapper_call(cargs *C.char, clen C.int) (*C.char, C.int) {
+func wrapper_call(cargs *C.void, clen C.int) (*C.char, C.int) {
 	rawData := C.GoBytes(unsafe.Pointer(cargs), clen)
-	server, _ := stack.RPCHandler()
-	res, err := server.ServeRawRequest(context.Background(), rawData)
-	if err != nil {
-		return C.CString(""), 0
+	log.Info(string(rawData))
+	server, err := stack.RPCHandler()
+	if err == nil {
+		res, err := server.ServeRawRequest(context.Background(), rawData)
+		if err == nil {
+			log.Info("Good")
+			c_res := C.CString(res)
+			return c_res, C.int(len(res))
+		} else {
+			log.Error("There is an error")
+			return nil, 0
+		}
+	} else {
+		log.Error("Could not get the RPC Handler")
 	}
-	c_res := C.CString(res)
-	return c_res, C.int(len(res))
+	return nil, 0
 }
 
 //export close_database

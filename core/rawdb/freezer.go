@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -107,6 +106,7 @@ func newFreezer(datadir string, namespace string, readonly bool, maxTableSize ui
 		readMeter  = metrics.NewRegisteredMeter(namespace+"ancient/read", nil)
 		writeMeter = metrics.NewRegisteredMeter(namespace+"ancient/write", nil)
 		sizeGauge  = metrics.NewRegisteredGauge(namespace+"ancient/size", nil)
+		err        error
 	)
 	// Ensure the datadir is not a symbolic link if it exists.
 	if info, err := os.Lstat(datadir); !os.IsNotExist(err) {
@@ -117,16 +117,16 @@ func newFreezer(datadir string, namespace string, readonly bool, maxTableSize ui
 	}
 	// Leveldb uses LOCK as the filelock filename. To prevent the
 	// name collision, we use FLOCK as the lock name.
-	lock, _, err := fileutil.Flock(filepath.Join(datadir, "FLOCK"))
-	if err != nil {
-		return nil, err
-	}
+	// lock, _, err := fileutil.Flock(filepath.Join(datadir, "FLOCK"))
+	// if err != nil {
+	// 	return nil, err
+	// }
 	// Open all the supported data tables
 	freezer := &freezer{
 		readonly:     readonly,
 		threshold:    params.FullImmutabilityThreshold,
 		tables:       make(map[string]*freezerTable),
-		instanceLock: lock,
+		instanceLock: nil,
 		trigger:      make(chan chan struct{}),
 		quit:         make(chan struct{}),
 	}
@@ -138,7 +138,7 @@ func newFreezer(datadir string, namespace string, readonly bool, maxTableSize ui
 			for _, table := range freezer.tables {
 				table.Close()
 			}
-			lock.Release()
+			// lock.Release()
 			return nil, err
 		}
 		freezer.tables[name] = table
@@ -156,7 +156,7 @@ func newFreezer(datadir string, namespace string, readonly bool, maxTableSize ui
 		for _, table := range freezer.tables {
 			table.Close()
 		}
-		lock.Release()
+		// lock.Release()
 		return nil, err
 	}
 
@@ -182,8 +182,10 @@ func (f *freezer) Close() error {
 				errs = append(errs, err)
 			}
 		}
-		if err := f.instanceLock.Release(); err != nil {
-			errs = append(errs, err)
+		if f.instanceLock != nil {
+			if err := f.instanceLock.Release(); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	})
 	if errs != nil {

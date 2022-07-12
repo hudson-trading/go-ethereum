@@ -19,6 +19,8 @@ readOnlyLib:
 all:
 	$(GORUN) build/ci.go install
 
+readOnlyTest:
+	go build -o build/bin/readOnlyTest ./cmd/read-only-lib
 android:
 	$(GORUN) build/ci.go aar --local
 	@echo "Done building."

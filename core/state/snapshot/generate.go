@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"runtime/debug"
 	"time"
 
 	"github.com/VictoriaMetrics/fastcache"
@@ -172,6 +173,7 @@ func generateSnapshot(diskdb ethdb.KeyValueStore, triedb *trie.Database, cache i
 
 // journalProgress persists the generator stats into the database to resume later.
 func journalProgress(db ethdb.KeyValueWriter, marker []byte, stats *generatorStats) {
+	debug.PrintStack()
 	// Write out the generator marker. Note it's a standalone disk layer generator
 	// which is not mixed with journal. It's ok if the generator is persisted while
 	// journal is not.

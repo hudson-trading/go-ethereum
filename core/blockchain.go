@@ -131,6 +131,7 @@ type CacheConfig struct {
 	Preimages           bool          // Whether to store preimage of trie key to the disk
 
 	SnapshotWait bool // Wait for snapshot construction on startup. TODO(karalabe): This is a dirty hack for testing, nuke it
+	ReadOnly     bool
 }
 
 // defaultCacheConfig are the default caching values if none are specified by the
@@ -823,9 +824,11 @@ func (bc *BlockChain) Stop() {
 	}
 	// Ensure all live cached entries be saved into disk, so that we can skip
 	// cache warmup when node restarts.
-	if bc.cacheConfig.TrieCleanJournal != "" {
-		triedb := bc.stateCache.TrieDB()
-		triedb.SaveCache(bc.cacheConfig.TrieCleanJournal)
+	if !bc.cacheConfig.ReadOnly {
+		if bc.cacheConfig.TrieCleanJournal != "" {
+			triedb := bc.stateCache.TrieDB()
+			triedb.SaveCache(bc.cacheConfig.TrieCleanJournal)
+		}
 	}
 	log.Info("Blockchain stopped")
 }

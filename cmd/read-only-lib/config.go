@@ -10,6 +10,10 @@ import (
 func makeReadOnlyNode(datadir string) (*node.Node, ethapi.Backend) {
 	node_cfg := node.DefaultConfig
 	eth_cfg := ethconfig.Defaults
+	eth_cfg.SnapshotCache = 0
+	eth_cfg.TrieCleanCache = 0
+	eth_cfg.NoPruning = true
+	eth_cfg.TrieCleanCacheJournal = ""
 	node_cfg.DataDir = datadir
 	node_cfg.ReadOnly = true
 	node_cfg.LocalLib = true
@@ -17,7 +21,7 @@ func makeReadOnlyNode(datadir string) (*node.Node, ethapi.Backend) {
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	backend, _ := utils.RegisterEthService(stack, &eth_cfg, false)
+	backend, _ := utils.RegisterEthService(stack, &eth_cfg)
 	return stack, backend
 }
 

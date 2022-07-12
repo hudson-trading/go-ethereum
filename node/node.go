@@ -512,6 +512,7 @@ func (n *Node) RPCHandler() (*rpc.Server, error) {
 	defer n.lock.Unlock()
 
 	if n.state == closedState {
+		log.Info("node is closed")
 		return nil, ErrNodeStopped
 	}
 	return n.inprocHandler, nil
@@ -599,6 +600,7 @@ func (n *Node) OpenDatabase(name string, cache, handles int, namespace string, r
 	if err == nil {
 		db = n.wrapDatabase(db)
 	}
+	log.Info("after node.opendatabase")
 	return db, err
 }
 
