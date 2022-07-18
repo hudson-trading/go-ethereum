@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync/atomic"
 
@@ -46,6 +47,10 @@ type Server struct {
 	idgen    func() ID
 	run      int32
 	codecs   mapset.Set
+}
+
+func (s *Server) Services() *serviceRegistry {
+	return &s.services
 }
 
 // NewServer creates a new server instance with no registered handlers.
@@ -113,6 +118,22 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec) {
 	} else {
 		h.handleMsg(reqs[0])
 	}
+}
+
+func (s *Server) ServeRawRequest(ctx context.Context, data []byte) (string, error) {
+	// Don't serve if server is stopped.
+	if atomic.LoadInt32(&s.run) == 0 {
+		return "", errors.New("Server Stopped")
+	}
+
+	codec := NewFuncCodec(nil, nil, nil)
+
+	h := newHandler(ctx, codec, s.idgen, &s.services)
+	h.allowSubscribe = false
+	defer h.close(io.EOF, nil)
+	msg, _ := ParseMessage(data)
+	return h.HandleCallMsg(DefaultCallProc(), msg[0]).String(), nil
+
 }
 
 // Stop stops reading new requests, waits for stopPendingRequestTimeout to allow pending

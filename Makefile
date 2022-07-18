@@ -13,9 +13,14 @@ geth:
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
+
+readOnlyLib:
+	go build -buildmode c-shared -o build/bin/read-only-lib.so ./cmd/read-only-lib
 all:
 	$(GORUN) build/ci.go install
 
+readOnlyTest:
+	go build -o build/bin/readOnlyTest ./cmd/read-only-lib
 android:
 	$(GORUN) build/ci.go aar --local
 	@echo "Done building."

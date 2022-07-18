@@ -181,6 +181,7 @@ func (hc *httpConn) doRequest(ctx context.Context, msg interface{}) (io.ReadClos
 		return nil, err
 	}
 	req.ContentLength = int64(len(body))
+	req.GetBody = func() (io.ReadCloser, error) { return ioutil.NopCloser(bytes.NewReader(body)), nil }
 
 	// set headers
 	hc.mu.Lock()
@@ -215,7 +216,7 @@ type httpServerConn struct {
 	r *http.Request
 }
 
-func newHTTPServerConn(r *http.Request, w http.ResponseWriter) ServerCodec {
+func NewHTTPServerConn(r *http.Request, w http.ResponseWriter) ServerCodec {
 	body := io.LimitReader(r.Body, maxRequestContentLength)
 	conn := &httpServerConn{Reader: body, Writer: w, r: r}
 	return NewCodec(conn)
@@ -257,7 +258,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// until EOF, writes the response to w, and orders the server to process a
 	// single request.
 	w.Header().Set("content-type", contentType)
-	codec := newHTTPServerConn(r, w)
+	codec := NewHTTPServerConn(r, w)
 	defer codec.close()
 	s.serveSingleRequest(ctx, codec)
 }
